@@ -20,8 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ТВОЙ API КЛЮЧ (уже вставлен)
-OPENROUTER_API_KEY = "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"
+# ТВОЙ API КЛЮЧ GEMINI
+GEMINI_API_KEY = "AIzaSyBrjq1AvTlVolCjHFbZ_4FxlSlRHwfFGRQ"
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -125,12 +125,18 @@ HTML_PAGE = """
         @keyframes spin { to { transform: rotate(360deg); } }
         .error { color: #ff6b6b; margin-top: 12px; text-align: center; display: none; }
         .error.show { display: block; }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🖤 Shadow AI</h1>
-        <div class="subtitle">Твой личный тёмный помощник</div>
+        <div class="subtitle">Твой личный тёмный помощник на Gemini</div>
         <div class="input-group">
             <label>Что хочешь спросить?</label>
             <textarea id="prompt" placeholder="Напиши свой вопрос..."></textarea>
@@ -144,6 +150,7 @@ HTML_PAGE = """
             <div class="result-text" id="resultText"></div>
         </div>
         <div class="error" id="error"></div>
+        <div class="footer">⚡ Работает на Google Gemini | Бесплатно</div>
     </div>
     <script>
         const API_URL = '/generate';
@@ -201,21 +208,27 @@ async def root():
 
 @app.post("/generate")
 async def generate_text(request: PromptRequest):
-    """Отправляет запрос к OpenRouter"""
+    """Отправляет запрос к Google Gemini API"""
     
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
     payload = {
-        "model": "openai/gpt-3.5-turbo",
-        "messages": [
-            {"role": "user", "content": request.prompt}
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": request.prompt
+                    }
+                ]
+            }
         ],
-        "temperature": request.temperature,
-        "max_tokens": request.max_tokens
+        "generationConfig": {
+            "temperature": request.temperature,
+            "maxOutputTokens": request.max_tokens
+        }
     }
     
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
     
@@ -227,12 +240,13 @@ async def generate_text(request: PromptRequest):
             response.raise_for_status()
             data = response.json()
             
-            text = data.get("choices", [{}])[0].get("message", {}).get("content", "Нет ответа")
+            # Извлекаем текст из ответа Gemini
+            text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Нет ответа")
             logger.info(f"Shadow ответил")
             return {"text": text}
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка API: {e.response.text}")
+            logger.error(f"Ошибка Gemini API: {e.response.text}")
             raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
         except Exception as e:
             logger.error(f"Ошибка: {str(e)}")
