@@ -20,8 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ТВОЙ API КЛЮЧ GEMINI
-GEMINI_API_KEY = "AIzaSyBrjq1AvTlVolCjHFbZ_4FxlSlRHwfFGRQ"
+# ⚡ ВСТАВЬ СВОЙ КЛЮЧ СЮДА ⚡
+DEEPSEEK_API_KEY = "sk-49a1feadea554de4bc1b52702f53c1ca"  # ← ЗАМЕНИ!
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -136,7 +136,7 @@ HTML_PAGE = """
 <body>
     <div class="container">
         <h1>🖤 Shadow AI</h1>
-        <div class="subtitle">Твой личный тёмный помощник на Gemini</div>
+        <div class="subtitle">Твой личный ИИ помощник на DeepSeek</div>
         <div class="input-group">
             <label>Что хочешь спросить?</label>
             <textarea id="prompt" placeholder="Напиши свой вопрос..."></textarea>
@@ -150,7 +150,7 @@ HTML_PAGE = """
             <div class="result-text" id="resultText"></div>
         </div>
         <div class="error" id="error"></div>
-        <div class="footer">⚡ Работает на Google Gemini | Бесплатно</div>
+        <div class="footer">⚡ Работает на DeepSeek | Бесплатно 5 млн токенов</div>
     </div>
     <script>
         const API_URL = '/generate';
@@ -208,27 +208,17 @@ async def root():
 
 @app.post("/generate")
 async def generate_text(request: PromptRequest):
-    """Отправляет запрос к Google Gemini API"""
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = "https://api.deepseek.com/v1/chat/completions"
     
     payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": request.prompt
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": request.temperature,
-            "maxOutputTokens": request.max_tokens
-        }
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": request.prompt}],
+        "temperature": request.temperature,
+        "max_tokens": request.max_tokens
     }
     
     headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
     }
     
@@ -236,20 +226,12 @@ async def generate_text(request: PromptRequest):
     
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            response = await client.post(url, json=payload, headers=headers, timeout=60.0)
             response.raise_for_status()
             data = response.json()
-            
-            # Извлекаем текст из ответа Gemini
-            text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Нет ответа")
-            logger.info(f"Shadow ответил")
+            text = data.get("choices", [{}])[0].get("message", {}).get("content", "Нет ответа")
             return {"text": text}
-            
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка Gemini API: {e.response.text}")
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
         except Exception as e:
-            logger.error(f"Ошибка: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
