@@ -20,9 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ТВОИ ДАННЫЕ (уже вставлены)
+# ТВОИ ИСПРАВЛЕННЫЕ ДАННЫЕ
 YANDEX_API_KEY = "AQVN3IMaT2ojhFtddMWiE2DMNR429bX_bb7Vbu-w"
-YANDEX_FOLDER_ID = "ajesgcd4uqh3ghdlqt65"
+YANDEX_FOLDER_ID = "b1g1fditm7vaa4rqgp1p"  # ← ПРАВИЛЬНЫЙ (из ошибки)
 
 class PromptRequest(BaseModel):
     prompt: str
